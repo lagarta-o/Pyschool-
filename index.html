@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <!-- Configuração de caracteres e viewport para responsividade -->
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Título da aba do navegador -->
+    <title>PySchool</title>
+    <!-- Link para o arquivo CSS na raiz do projeto -->
+    <link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+    <!-- Tela de Login: exibida inicialmente para o usuário -->
+    <div id="tela-login">
+        <form id="form-login">
+            <!-- Campo para digitar o nome de usuário -->
+            <input type="text" id="campo-usuario" placeholder="Seu nome" required>
+            <!-- Campo para digitar a senha -->
+            <input type="password" id="campo-senha" placeholder="Sua senha" required>
+            <!-- Botão para submeter o formulário de login -->
+            <button type="submit">Entrar</button>
+        </form>
+    </div>
+
+    <!-- Aplicação Principal: escondida inicialmente até o login ser efetuado -->
+    <div id="app" style="display:none;">
+        
+        <!-- Barra lateral de navegação -->
+        <aside class="sidebar">
+            <h1>PySchool</h1>
+            <!-- Span onde o nome do usuário logado será exibido -->
+            <span id="nome-usuario"></span>
+            
+            <!-- Botões de navegação entre as telas do painel -->
+            <nav>
+                <button onclick="mostrarTela('inicio')">Início</button>
+                <button onclick="mostrarTela('progresso')">Progresso</button>
+                <button onclick="mostrarTela('perfil')">Perfil</button>
+            </nav>
+            
+            <!-- Botão para encerrar a sessão e voltar à tela de login -->
+            <button onclick="sair()">Sair</button>
+        </aside>
+
+        <!-- Conteúdo principal do painel -->
+        <main>
+            <!-- Seção Tela Início: Lista as lições disponíveis -->
+            <section id="tela-inicio">
+                <h2>Licões Disponíveis</h2>
+                <!-- Div onde as lições serão injetadas dinamicamente via JS -->
+                <div id="lista-licoes"></div>
+            </section>
+
+            <!-- Seção Tela Progresso: Mostra estatísticas e barra de progresso -->
+            <section id="tela-progresso" style="display:none;">
+                <h2>Seu Progresso</h2>
+                <p>XP Total: <span id="xp-total">0</span></p>
+                <p>Lições Concluídas: <span id="contador-licoes">0</span></p>
+                
+                <!-- Barra de progresso visual -->
+                <div class="barra-fundo">
+                    <div id="barra-progresso" class="barra-frente"></div>
+                </div>
+            </section>
+
+            <!-- Seção Tela Perfil: Informações do usuário -->
+            <section id="tela-perfil" style="display:none;">
+                <h2>Perfil do Usuário</h2>
+                <p>Nome: <span id="perfil-nome"></span></p>
+                <p>XP: <span id="perfil-xp"></span></p>
+            </section>
+        </main>
+
+    </div>
+
+    <!-- Script JavaScript da aplicação na raiz do projeto -->
+    <script src="/app.js"></script>
+</body>
+</html>
