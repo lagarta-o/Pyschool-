@@ -14,12 +14,16 @@
     <!-- Tela de Login: exibida inicialmente para o usuário -->
     <div id="tela-login">
         <form id="form-login">
-            <!-- Campo para digitar o nome de usuário -->
-            <input type="text" id="campo-usuario" placeholder="Seu nome" required>
-            <!-- Campo para digitar a senha -->
+            <!-- Campo de nome exibido no modo de cadastro -->
+            <input type="text" id="campo-nome" placeholder="Seu nome" style="display:none;">
+            <input type="email" id="campo-email" placeholder="Seu e-mail" required>
             <input type="password" id="campo-senha" placeholder="Sua senha" required>
-            <!-- Botão para submeter o formulário de login -->
-            <button type="submit">Entrar</button>
+            <!-- Botão principal para entrar ou criar conta -->
+            <button type="submit" id="botao-entrar">Entrar no PySchool</button>
+            <!-- Link para alternar entre os modos de login e cadastro -->
+            <a href="#" id="link-cadastro" onclick="alternarCadastro(); return false;">Primeira vez? Crie sua conta</a>
+            <!-- Mensagem de validação do formulário -->
+            <p id="msg-login"></p>
         </form>
     </div>
 

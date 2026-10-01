@@ -8,6 +8,7 @@
 
 const SUPABASE_URL = "https://uaonpehkmxqgvekrdmud.supabase.co";
 const SUPABASE_PUBLISHABLE_KEY = "sb_publishable_s5D2znFTI0ALTvH1Ipthpw_o-RyaE0o";
+let modoCadastro = false;
 
 // Helper para chamadas à API REST do Supabase
 async function supabaseFetch(caminho, opcoes = {}) {
@@ -31,6 +32,64 @@ function usuarioAtual() {
     return localStorage.getItem("pyschool_usuario");
 }
 
+async function chamarRpc(nomeFuncao, corpo) {
+    try {
+        const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nomeFuncao}`, {
+            method: 'POST',
+            headers: {
+                apikey: SUPABASE_PUBLISHABLE_KEY,
+                Authorization: `Bearer ${SUPABASE_PUBLISHABLE_KEY}`,
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify(corpo)
+        });
+        if (!response.ok) {
+            console.error(`Erro Supabase ${response.status}: ${await response.text()}`);
+            return null;
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('Erro ao chamar função do Supabase:', error);
+        return null;
+    }
+}
+
+async function verificarLogin(email, senha, nome) {
+    if (modoCadastro) {
+        const cadastro = await chamarRpc('pyschool_cadastrar', {
+            p_nome: nome,
+            p_email: email,
+            p_senha: senha
+        });
+        if (cadastro !== true) {
+            return 'cadastro-falhou';
+        }
+    }
+
+    const linhas = await chamarRpc('pyschool_entrar', {
+        p_email: email,
+        p_senha: senha
+    });
+    if (!Array.isArray(linhas) || linhas.length === 0) {
+        return modoCadastro ? 'cadastro-falhou' : 'senha-incorreta';
+    }
+
+    localStorage.setItem("pyschool_usuario", linhas[0].email);
+    return 'ok';
+}
+
+function mostrarMensagemLogin(mensagem) {
+    document.getElementById('msg-login').textContent = mensagem;
+}
+
+function alternarCadastro() {
+    modoCadastro = !modoCadastro;
+    document.getElementById('campo-nome').style.display = modoCadastro ? 'block' : 'none';
+    document.getElementById('botao-entrar').textContent = modoCadastro ? 'Criar conta' : 'Entrar no PySchool';
+    document.getElementById('link-cadastro').textContent = modoCadastro ? 'Já tenho conta. Quero entrar' : 'Primeira vez? Crie sua conta';
+    mostrarMensagemLogin('');
+}
+
 // Espera o HTML carregar completamente para executar o script
 document.addEventListener('DOMContentLoaded', () => {
     // Verifica se já existe um usuário salvo no localStorage
@@ -41,13 +100,22 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Adiciona o evento de submit no formulário de login
     const formLogin = document.getElementById('form-login');
-    formLogin.addEventListener('submit', (e) => {
+    formLogin.addEventListener('submit', async (e) => {
         e.preventDefault(); // Evita o recarregamento da página
-        const usuario = document.getElementById('campo-usuario').value.trim();
-        if (usuario) {
-            // Salva o usuário no localStorage e inicia o app
-            localStorage.setItem("pyschool_usuario", usuario);
-            iniciarApp(usuario);
+        const email = document.getElementById('campo-email').value.trim();
+        const senha = document.getElementById('campo-senha').value;
+        const nome = document.getElementById('campo-nome').value.trim();
+        if (modoCadastro && !nome) {
+            mostrarMensagemLogin('Digite o seu nome');
+            return;
+        }
+        const resultado = await verificarLogin(email, senha, nome);
+        if (resultado === 'ok') {
+            iniciarApp(email);
+        } else if (resultado === 'cadastro-falhou') {
+            mostrarMensagemLogin('Não foi possível criar a conta. Esse e-mail já pode ter conta.');
+        } else {
+            mostrarMensagemLogin('E-mail ou senha incorretos');
         }
     });
 });
@@ -71,6 +139,9 @@ function sair() {
     document.getElementById('app').style.display = 'none';
     document.getElementById('tela-login').style.display = 'flex';
     document.getElementById('form-login').reset();
+    if (modoCadastro) {
+        alternarCadastro();
+    }
 }
 
 // Função para alternar entre as telas (seções) do app

@@ -205,3 +205,19 @@ h2 {
 p {
     margin-bottom: 10px;
 }
+
+/* Estilo do link para alternar entre entrar e criar conta */
+#form-login a {
+    color: var(--amarelo);
+    font-size: 14px;
+    text-align: center;
+    text-decoration: none;
+}
+
+/* Área fixa para mensagens do formulário de login */
+#msg-login {
+    color: #e74c3c;
+    margin: 0;
+    min-height: 20px;
+    text-align: center;
+}
