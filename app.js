@@ -25,7 +25,8 @@ async function supabaseFetch(caminho, opcoes = {}) {
         const texto = await response.text();
         throw new Error(`Supabase ${response.status}: ${texto}`);
     }
-    return response.json();
+    const texto = await response.text();
+    return texto ? JSON.parse(texto) : null;
 }
 
 function usuarioAtual() {
@@ -41,8 +42,7 @@ async function buscarLicoes() {
     if (!response.ok) {
         throw new Error(`Erro ao carregar lições: HTTP ${response.status}`);
     }
-    const texto = await response.text();
-    return texto ? JSON.parse(texto) : null;
+    return response.json();
 }
 
 async function chamarRpc(nomeFuncao, corpo) {
