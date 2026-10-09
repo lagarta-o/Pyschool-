@@ -32,6 +32,18 @@ function usuarioAtual() {
     return localStorage.getItem("pyschool_usuario");
 }
 
+function nomeUsuarioAtual() {
+    return localStorage.getItem("pyschool_nome");
+}
+
+async function buscarLicoes() {
+    const response = await fetch('/api/licoes');
+    if (!response.ok) {
+        throw new Error(`Erro ao carregar lições: HTTP ${response.status}`);
+    }
+    return response.json();
+}
+
 async function chamarRpc(nomeFuncao, corpo) {
     try {
         const response = await fetch(`${SUPABASE_URL}/rest/v1/rpc/${nomeFuncao}`, {
@@ -74,7 +86,8 @@ async function verificarLogin(email, senha, nome) {
         return modoCadastro ? 'cadastro-falhou' : 'senha-incorreta';
     }
 
-    localStorage.setItem("pyschool_usuario", linhas[0].email);
+    localStorage.setItem("pyschool_usuario", linhas[0].email || email);
+    localStorage.setItem("pyschool_nome", linhas[0].nome || nome || linhas[0].email || email);
     return 'ok';
 }
 
@@ -94,8 +107,9 @@ function alternarCadastro() {
 document.addEventListener('DOMContentLoaded', () => {
     // Verifica se já existe um usuário salvo no localStorage
     const usuarioSalvo = localStorage.getItem("pyschool_usuario");
-    if (usuarioSalvo) {
-        iniciarApp(usuarioSalvo);
+    const nomeSalvo = nomeUsuarioAtual();
+    if (usuarioSalvo && nomeSalvo) {
+        iniciarApp(nomeSalvo);
     }
 
     // Adiciona o evento de submit no formulário de login
@@ -111,7 +125,7 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const resultado = await verificarLogin(email, senha, nome);
         if (resultado === 'ok') {
-            iniciarApp(email);
+            iniciarApp(nomeUsuarioAtual());
         } else if (resultado === 'cadastro-falhou') {
             mostrarMensagemLogin('Não foi possível criar a conta. Esse e-mail já pode ter conta.');
         } else {
@@ -136,6 +150,7 @@ function iniciarApp(nome) {
 // Função para sair do app (logout)
 function sair() {
     localStorage.removeItem("pyschool_usuario");
+    localStorage.removeItem("pyschool_nome");
     document.getElementById('app').style.display = 'none';
     document.getElementById('tela-login').style.display = 'flex';
     document.getElementById('form-login').reset();
@@ -154,16 +169,18 @@ function mostrarTela(nome) {
 
 // Busca as lições no Supabase e monta os cards na tela inicial
 async function carregarLicoes() {
+    const container = document.getElementById('lista-licoes');
+    container.replaceChildren();
     try {
-        const usuario = encodeURIComponent(usuarioAtual() || '');
-        const [licoes, progresso] = await Promise.all([
-            supabaseFetch('licoes?select=*&order=id.asc'),
-            supabaseFetch(`progresso?usuario=eq.${usuario}&select=licao_id`)
-        ]);
-        const idsConcluidos = new Set(progresso.map(p => String(p.licao_id)));
-
-        const container = document.getElementById('lista-licoes');
-        container.innerHTML = ''; // Limpa a lista antes de renderizar
+        const licoes = await buscarLicoes();
+        let idsConcluidos = new Set();
+        try {
+            const usuario = encodeURIComponent(usuarioAtual() || '');
+            const progresso = await supabaseFetch(`pyschool_progresso?aluno=eq.${usuario}&select=licao_id`);
+            idsConcluidos = new Set(progresso.map(p => String(p.licao_id)));
+        } catch (error) {
+            console.error('Erro ao carregar progresso das lições:', error);
+        }
 
         licoes.forEach(licao => {
             const concluida = idsConcluidos.has(String(licao.id));
@@ -173,33 +190,42 @@ async function carregarLicoes() {
             // Adiciona a classe 'concluida' se a lição já tiver sido feita
             card.className = 'card' + (concluida ? ' concluida' : '');
 
-            // Monta o HTML interno do card
-            card.innerHTML = `
-                <div>
-                    <h3 class="titulo-licao">${licao.titulo}</h3>
-                    <p>${licao.descricao}</p>
-                </div>
-                <div style="display: flex; align-items: center; gap: 15px;">
-                    <span class="badge">${licao.xp} XP</span>
-                    <button ${concluida ? 'disabled' : ''} onclick="concluirLicao(${licao.id})">
-                        ${concluida ? 'Concluída' : 'Concluir'}
-                    </button>
-                </div>
-            `;
+            const detalhes = document.createElement('div');
+            const titulo = document.createElement('h3');
+            titulo.className = 'titulo-licao';
+            titulo.textContent = licao.titulo;
+            const descricao = document.createElement('p');
+            descricao.textContent = licao.descricao;
+            detalhes.append(titulo, descricao);
+
+            const acoes = document.createElement('div');
+            acoes.style.cssText = 'display: flex; align-items: center; gap: 15px;';
+            const badge = document.createElement('span');
+            badge.className = 'badge';
+            badge.textContent = `${licao.xp} XP`;
+            const botao = document.createElement('button');
+            botao.disabled = concluida;
+            botao.textContent = concluida ? 'Concluída' : 'Concluir';
+            botao.addEventListener('click', () => concluirLicao(licao.id));
+            acoes.append(badge, botao);
+            card.append(detalhes, acoes);
             container.appendChild(card);
         });
     } catch (error) {
         console.error('Erro ao carregar lições:', error);
+        const mensagem = document.createElement('p');
+        mensagem.textContent = 'Não foi possível carregar as lições agora. Tente novamente em instantes.';
+        container.appendChild(mensagem);
     }
 }
 
 // Marca uma lição como concluída no Supabase (sem duplicar)
 async function concluirLicao(id) {
     try {
-        await supabaseFetch('progresso?on_conflict=usuario,licao_id', {
+        await supabaseFetch('pyschool_progresso?on_conflict=aluno,licao_id', {
             method: 'POST',
             headers: { Prefer: 'resolution=ignore-duplicates,return=minimal' },
-            body: JSON.stringify({ usuario: usuarioAtual(), licao_id: id })
+            body: JSON.stringify({ aluno: usuarioAtual(), licao_id: id })
         });
         // Recarrega as lições e o progresso para refletir a mudança
         carregarLicoes();
@@ -214,8 +240,8 @@ async function atualizarProgresso() {
     try {
         const usuario = encodeURIComponent(usuarioAtual() || '');
         const [licoes, progresso] = await Promise.all([
-            supabaseFetch('licoes?select=id,xp'),
-            supabaseFetch(`progresso?usuario=eq.${usuario}&select=licao_id`)
+            buscarLicoes(),
+            supabaseFetch(`pyschool_progresso?aluno=eq.${usuario}&select=licao_id`)
         ]);
 
         const total = licoes.length;
