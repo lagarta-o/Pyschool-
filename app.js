@@ -41,7 +41,8 @@ async function buscarLicoes() {
     if (!response.ok) {
         throw new Error(`Erro ao carregar lições: HTTP ${response.status}`);
     }
-    return response.json();
+    const texto = await response.text();
+    return texto ? JSON.parse(texto) : null;
 }
 
 async function chamarRpc(nomeFuncao, corpo) {
@@ -228,8 +229,7 @@ async function concluirLicao(id) {
             body: JSON.stringify({ aluno: usuarioAtual(), licao_id: id })
         });
         // Recarrega as lições e o progresso para refletir a mudança
-        carregarLicoes();
-        atualizarProgresso();
+        await Promise.all([carregarLicoes(), atualizarProgresso()]);
     } catch (error) {
         console.error('Erro ao concluir lição:', error);
     }
